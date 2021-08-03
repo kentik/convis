@@ -1,0 +1,45 @@
+[package]
+name    = "convis"
+version = "0.0.1"
+edition = "2018"
+
+[dependencies]
+bytes        = "1.0.1"
+env_logger   = "0.9.0"
+hostname     = "0.3.1"
+gumdrop      = "0.8.0"
+libc         = "0.2.98"
+log          = "0.4.14"
+procfs       = "0.9.1"
+serde_json   = "1.0.65"
+
+[dependencies.anyhow]
+version  = "1.0.42"
+features = ["backtrace"]
+
+[dependencies.aya]
+version  = "0.10.3"
+features = ["async_tokio"]
+
+[dependencies.shiplift]
+git = "https://github.com/softprops/shiplift.git"
+features = ["unix-socket"]
+default-features = false
+
+[dependencies.bytemuck]
+version  = "1.7.2"
+features = ["derive"]
+
+[dependencies.reqwest]
+version  = "0.11.4"
+features = ["gzip", "json", "rustls-tls"]
+default-features = false
+
+[dependencies.serde]
+version  = "1.0.126"
+features = ["derive"]
+
+
+[dependencies.tokio]
+version  = "1.9.0"
+features = ["full"]
