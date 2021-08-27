@@ -1,6 +1,7 @@
 use std::str::FromStr;
 use anyhow::{Error, Result, anyhow};
 use crate::data::Record;
+use super::Args;
 use super::nr::Client;
 
 pub enum Sink {
@@ -27,11 +28,11 @@ impl Default for Sink {
 impl FromStr for Sink {
    type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let args = s.splitn(2, '=').collect::<Vec<_>>();
-        match &args[..] {
-            ["newrelic", key] => Ok(Self::NewRelic(Client::new(key)?)),
-            _                 => Err(anyhow!("{}", s)),
+    fn from_str(arg: &str) -> Result<Self, Self::Err> {
+        match Args::parse(arg)? {
+            ("newrelic", args) => Ok(Self::NewRelic(Client::new(args)?)),
+            ("stdout",  _args) => Ok(Self::Stdout),
+            _                  => Err(anyhow!("{}", arg)),
         }
     }
 }
