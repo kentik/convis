@@ -64,6 +64,10 @@ impl Code {
                     name               => name,
                 };
                 kprobe.attach(func, 0)?;
+            } else if let Program::TracePoint(trace) = prog {
+                let index = name.find('/').unwrap_or(0);
+                let (category, name) = name.split_at(index);
+                trace.attach(category, name)?;
             }
         }
 
