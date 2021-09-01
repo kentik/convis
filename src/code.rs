@@ -8,7 +8,7 @@ use aya::programs::Program;
 use aya::util::online_cpus;
 use log::{debug, error};
 use tokio::sync::mpsc::{channel, Receiver};
-use crate::event::Event;
+use crate::event::{Event, Exec, Sock};
 
 pub struct Code {
     bpf: Bpf,
@@ -21,11 +21,12 @@ impl Code {
         Ok(Self { bpf })
     }
 
-    pub fn exec(&mut self) -> Result<Receiver<Event>> {
+    pub fn exec(&mut self) -> Result<(Receiver<Exec>, Receiver<Sock>)> {
         let events = self.bpf.map_mut("events")?;
 
         let mut events = AsyncPerfEventArray::try_from(events)?;
-        let (tx, rx) = channel(1024);
+        let (tx0, rx0) = channel(1024);
+        let (tx1, rx1) = channel(1024);
 
         for cpu in online_cpus()? {
             let mut buf  = events.open(cpu, None)?;
@@ -33,15 +34,18 @@ impl Code {
                 BytesMut::with_capacity(1024)
             }).collect::<Vec<_>>();
 
-            let tx = tx.clone();
+            let tx0 = tx0.clone();
+            let tx1 = tx1.clone();
 
             spawn(async move {
                 loop {
                     let events = buf.read_events(&mut bufs).await?;
-                    for i in 0..events.read {
-                        let buf = &mut bufs[i];
-                        let event = Event::try_from(&buf[..])?;
-                        tx.send(event).await?;
+                    for buf in bufs.iter_mut().take(events.read) {
+                        match Event::read(&buf[..]) {
+                            Ok(Event::Exec(e)) => tx0.send(e).await?,
+                            Ok(Event::Sock(s)) => tx1.send(s).await?,
+                            Err(e)             => error!("{}", e),
+                        };
                     }
                 }
             });
@@ -71,7 +75,7 @@ impl Code {
             }
         }
 
-        Ok(rx)
+        Ok((rx0, rx1))
     }
 }
 

@@ -15,27 +15,20 @@
     bpf_trace_printk(_fmt, sizeof(_fmt), ##__VA_ARGS__); \
 })
 
-static unsigned long long (*bpf_get_current_task)(void) =
-	(void *) BPF_FUNC_get_current_task;
-
-static int (*bpf_probe_read_str)(void *ctx, __u32 size, const void *unsafe_ptr) =
-	(void *) BPF_FUNC_probe_read_str;
-
-struct EBPF_bpf_map_def {
-	unsigned int type;
-	unsigned int key_size;
-	unsigned int value_size;
-	unsigned int max_entries;
-	unsigned int map_flags;
-    unsigned int inner_map_fd;
-    unsigned int numa_node;
-    uint8_t      map_name[16];
-    unsigned int map_ifindex;
+enum kind {
+    EXEC,
+    EXIT,
+    CONNECT,
+    ACCEPT,
+    CLOSE,
 };
 
-struct event {
-    u32 event;
+struct header {
+    u32 kind;
     u32 pid;
+};
+
+struct sock4 {
     u32 proto;
     u32 saddr;
     u32 sport;
@@ -43,8 +36,23 @@ struct event {
     u32 dport;
 };
 
+struct connect {
+    struct header header;
+    struct sock4  socket;
+};
+
+struct accept {
+    struct header header;
+    struct sock4  socket;
+};
+
+struct close {
+    struct header header;
+    struct sock4  socket;
+};
+
 SEC("maps/events")
-struct EBPF_bpf_map_def events = {
+struct bpf_map_def events = {
     .type        = BPF_MAP_TYPE_PERF_EVENT_ARRAY,
     .key_size    = sizeof(int),
     .value_size  = sizeof(int),
@@ -52,18 +60,10 @@ struct EBPF_bpf_map_def events = {
 };
 
 SEC("maps/socks")
-struct EBPF_bpf_map_def socks = {
+struct bpf_map_def socks = {
     .type        = BPF_MAP_TYPE_HASH,
     .key_size    = sizeof(u32),
     .value_size  = sizeof(struct sock *),
-    .max_entries = 512,
-};
-
-SEC("maps/procs")
-struct EBPF_bpf_map_def procs = {
-    .type        = BPF_MAP_TYPE_LRU_HASH,
-    .key_size    = sizeof(struct sock *),
-    .value_size  = sizeof(u64),
     .max_entries = 512,
 };
 
@@ -102,19 +102,23 @@ int bpf_exit_tcp_connect(struct pt_regs *ctx) {
     struct sock_common sc;
     bpf_probe_read(&sc, sizeof(sc), &sk->__sk_common);
 
-    struct event event = {
-        .event = 1,
-        .pid   = pid,
-        .proto = 6,
-        .saddr = sc.skc_rcv_saddr,
-        .sport = sc.skc_num,
-        .daddr = sc.skc_daddr,
-        .dport = ntohs(sc.skc_dport),
+    struct connect event = {
+        .header = {
+            .kind = CONNECT,
+            .pid  = pid,
+        },
+        .socket = {
+            .proto = 6,
+            .saddr = sc.skc_rcv_saddr,
+            .sport = sc.skc_num,
+            .daddr = sc.skc_daddr,
+            .dport = ntohs(sc.skc_dport),
+        },
     };
 
     rc = bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &event, sizeof(event));
     if (rc != 0) {
-        bpf_printk("perf event output failure: %d\n", rc);
+        bpf_printk("connect event output failure: %d\n", rc);
     }
     bpf_map_delete_elem(&socks, &tid);
 
@@ -137,17 +141,24 @@ int bpf_call_inet_csk_accept(struct pt_regs *ctx) {
     struct sock_common sc;
     bpf_probe_read(&sc, sizeof(sc), &sk->__sk_common);
 
-    struct event event = {
-        .event = 2,
-        .pid   = pid,
-        .proto = 6,
-        .saddr = sc.skc_rcv_saddr,
-        .sport = sc.skc_num,
-        .daddr = sc.skc_daddr,
-        .dport = ntohs(sc.skc_dport),
+    struct accept event = {
+        .header = {
+            .kind = ACCEPT,
+            .pid  = pid,
+        },
+        .socket = {
+            .proto = 6,
+            .saddr = sc.skc_rcv_saddr,
+            .sport = sc.skc_num,
+            .daddr = sc.skc_daddr,
+            .dport = ntohs(sc.skc_dport),
+        },
     };
 
-    bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &event, sizeof(event));
+    int rc = bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &event, sizeof(event));
+    if (rc != 0) {
+        bpf_printk("accept event output failure: %d\n", rc);
+    }
 
     return 0;
 }
@@ -163,21 +174,69 @@ int bpf_call_tcp_close(struct pt_regs *ctx) {
     struct sock_common sc;
     bpf_probe_read(&sc, sizeof(sc), &sk->__sk_common);
 
-    struct event event = {
-        .event = 5,
-        .pid   = pid,
-        .proto = 6,
-        .saddr = sc.skc_rcv_saddr,
-        .sport = sc.skc_num,
-        .daddr = sc.skc_daddr,
-        .dport = ntohs(sc.skc_dport),
+    struct close event = {
+        .header = {
+            .kind = CLOSE,
+            .pid  = pid,
+        },
+        .socket = {
+            .proto = 6,
+            .saddr = sc.skc_rcv_saddr,
+            .sport = sc.skc_num,
+            .daddr = sc.skc_daddr,
+            .dport = ntohs(sc.skc_dport),
+        },
     };
 
     int rc = bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &event, sizeof(event));
     if (rc != 0) {
-        bpf_printk("perf event output failure: %d\n", rc);
+        bpf_printk("close event output failure: %d\n", rc);
     }
     bpf_map_delete_elem(&socks, &tid);
+
+    return 0;
+}
+
+typedef struct {
+    u64   __pad;
+    char  *filename;
+    pid_t pid;
+    pid_t old_pid;
+} sched_process_exec_ctx;
+
+SEC("tracepoint/sched/sched_process_exec")
+int bpf_trace_sched_process_exec(sched_process_exec_ctx *ctx) {
+    struct header event = {
+        .kind = EXEC,
+        .pid  = ctx->pid,
+    };
+
+    int rc = bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &event, sizeof(event));
+    if (rc != 0) {
+        bpf_printk("exec event output failure: %d\n", rc);
+    }
+
+    return 0;
+}
+
+typedef struct {
+    u64   __pad;
+    char  comm[16];
+    pid_t pid;
+    int   prio;
+} sched_process_exit_ctx;
+
+SEC("tracepoint/sched/sched_process_exit")
+int bpf_trace_sched_process_exit(sched_process_exit_ctx *ctx) {
+    struct header event = {
+        .kind = EXIT,
+        .pid  = ctx->pid,
+    };
+
+    int rc = bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &event, sizeof(event));
+    if (rc != 0) {
+        bpf_printk("exit event output failure: %d\n", rc);
+    }
 
     return 0;
 }

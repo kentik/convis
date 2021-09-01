@@ -1,4 +1,5 @@
 use std::fs;
+use std::sync::Arc;
 use anyhow::Result;
 use env_logger::Builder;
 use gumdrop::Options;
@@ -7,6 +8,7 @@ use shiplift::Docker;
 use convis::code::Code;
 use convis::data::Record;
 use convis::sink::Sink;
+use convis::track::Tracker;
 
 #[derive(Options)]
 pub struct Args {
@@ -38,13 +40,24 @@ async fn main() -> Result<()> {
         None       => BYTECODE.to_vec(),
     })?;
 
-    let docker = Docker::new();
-    let mut rx = code.exec()?;
+    let docker   = Docker::new();
+    let hostname = Arc::new(hostname::get()?.to_string_lossy().to_string());
+    let tracker  = Arc::new(Tracker::new(docker));
 
-    while let Some(event) = rx.recv().await {
+    let (execs, mut socks) = code.exec()?;
+    tracker.clone().spawn(execs);
+
+    while let Some(event) = socks.recv().await {
         trace!("{:?}", event);
 
-        if let Some(record) = Record::lookup(&docker, event).await? {
+        if let Some(process) = tracker.get(event.pid).await {
+            let record = Record {
+                event:    format!("{:?}", event.call),
+                src:      event.src,
+                dst:      event.dst,
+                process:  process.clone(),
+                hostname: hostname.clone(),
+            };
             trace!("{:?}", record);
             sink.send(record).await?;
         };
