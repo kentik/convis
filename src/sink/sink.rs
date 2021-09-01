@@ -10,9 +10,9 @@ pub enum Sink {
 }
 
 impl Sink {
-    pub async fn send(&self, record: Record) -> Result<()> {
+    pub fn send(&self, record: Record) -> Result<()> {
         match self {
-            Self::NewRelic(c) => c.send(record).await?,
+            Self::NewRelic(c) => c.send(record)?,
             Self::Stdout      => println!("{:?}", record),
         }
         Ok(())

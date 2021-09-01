@@ -1,5 +1,6 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
+use std::time::SystemTime;
 use libc::pid_t;
 use serde::Serialize;
 
@@ -26,9 +27,10 @@ pub enum Status {
 
 #[derive(Debug, Serialize)]
 pub struct Record {
-    pub event:    String,
-    pub src:      SocketAddr,
-    pub dst:      SocketAddr,
-    pub process:  Arc<Process>,
-    pub hostname: Arc<String>,
+    pub timestamp: SystemTime,
+    pub event:     String,
+    pub src:       SocketAddr,
+    pub dst:       SocketAddr,
+    pub process:   Arc<Process>,
+    pub hostname:  Arc<String>,
 }

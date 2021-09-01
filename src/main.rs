@@ -1,5 +1,6 @@
 use std::fs;
 use std::sync::Arc;
+use std::time::SystemTime;
 use anyhow::Result;
 use env_logger::Builder;
 use gumdrop::Options;
@@ -48,18 +49,21 @@ async fn main() -> Result<()> {
     tracker.clone().spawn(execs);
 
     while let Some(event) = socks.recv().await {
+        let timestamp = SystemTime::now();
+
         trace!("{:?}", event);
 
         if let Some(process) = tracker.get(event.pid).await {
             let record = Record {
-                event:    format!("{:?}", event.call),
-                src:      event.src,
-                dst:      event.dst,
-                process:  process.clone(),
-                hostname: hostname.clone(),
+                timestamp: timestamp,
+                event:     format!("{:?}", event.call),
+                src:       event.src,
+                dst:       event.dst,
+                process:   process.clone(),
+                hostname:  hostname.clone(),
             };
             trace!("{:?}", record);
-            sink.send(record).await?;
+            sink.send(record)?;
         };
     }
 
