@@ -3,10 +3,11 @@ use std::mem;
 use std::sync::Arc;
 use std::time::{UNIX_EPOCH, Duration};
 use anyhow::{anyhow, Result};
+use flate2::{Compression, write::GzEncoder};
 use log::{debug, error, warn};
 use parking_lot::Mutex;
 use reqwest::{Client as HttpClient, Method, Request, Url};
-use reqwest::header::{CONTENT_TYPE, HeaderMap, HeaderValue};
+use reqwest::header::{CONTENT_TYPE, CONTENT_ENCODING, HeaderMap, HeaderValue};
 use serde_json::json;
 use tokio::time::interval;
 use crate::data::Record;
@@ -40,6 +41,7 @@ impl Client {
         let mut headers = HeaderMap::new();
         headers.insert("X-Insert-Key", HeaderValue::from_str(key)?);
         headers.insert(CONTENT_TYPE, "application/json".try_into()?);
+        headers.insert(CONTENT_ENCODING, "gzip".try_into()?);
 
         let client = HttpClient::builder().default_headers(headers).build()?;
         let sender = Arc::new(Sender::new(client, endpoint));
@@ -111,9 +113,13 @@ impl Sender {
             debug!("sending {} records", payload.len());
 
             for chunk in payload.chunks(2000) {
+                let mut e = GzEncoder::new(Vec::new(), Compression::default());
+                serde_json::to_writer(&mut e, chunk)?;
+                let body = e.finish()?;
+
                 let endpoint = self.endpoint.clone();
                 let mut req  = Request::new(Method::POST, endpoint);
-                *req.body_mut() = Some(serde_json::to_vec(chunk)?.into());
+                *req.body_mut() = Some(body.into());
 
                 let res = self.client.execute(req).await?;
 
