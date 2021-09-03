@@ -49,6 +49,8 @@ struct accept {
 struct close {
     struct header header;
     struct sock4  socket;
+    u32           rx;
+    u32           tx;
 };
 
 SEC("maps/events")
@@ -174,6 +176,11 @@ int bpf_call_tcp_close(struct pt_regs *ctx) {
     struct sock_common sc;
     bpf_probe_read(&sc, sizeof(sc), &sk->__sk_common);
 
+    u32 rx = 0, tx = 0;
+    struct tcp_sock *tcp = (struct tcp_sock *) sk;
+    bpf_probe_read(&rx, sizeof(rx), &tcp->bytes_received);
+    bpf_probe_read(&tx, sizeof(tx), &tcp->bytes_acked);
+
     struct close event = {
         .header = {
             .kind = CLOSE,
@@ -186,6 +193,8 @@ int bpf_call_tcp_close(struct pt_regs *ctx) {
             .daddr = sc.skc_daddr,
             .dport = ntohs(sc.skc_dport),
         },
+        .rx = rx,
+        .tx = tx,
     };
 
     int rc = bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &event, sizeof(event));

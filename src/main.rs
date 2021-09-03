@@ -73,6 +73,8 @@ async fn main() -> Result<()> {
                 dst:       event.dst,
                 process:   process,
                 hostname:  hostname.clone(),
+                rx:        event.rx,
+                tx:        event.tx,
             };
             trace!("{:?}", record);
             sink.send(record)?;

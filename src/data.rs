@@ -33,4 +33,6 @@ pub struct Record {
     pub dst:       SocketAddr,
     pub process:   Arc<Process>,
     pub hostname:  Arc<String>,
+    pub rx:        u32,
+    pub tx:        u32,
 }

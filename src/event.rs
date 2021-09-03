@@ -23,6 +23,8 @@ pub struct Sock {
     pub pid:  pid_t,
     pub src:  SocketAddr,
     pub dst:  SocketAddr,
+    pub rx:   u32,
+    pub tx:   u32,
 }
 
 #[derive(Debug)]
@@ -78,7 +80,9 @@ impl Event {
 
 impl Sock {
     pub fn read(call: Call, pid: pid_t, buf: &[u8]) -> Result<Self> {
-        let sock4 = try_from_bytes::<Sock4>(buf).map_err(|e| {
+        let (data, tail) = buf.split_at(size_of::<Sock4>());
+
+        let sock4 = try_from_bytes::<Sock4>(data).map_err(|e| {
             anyhow!("invalid sock4: {}", e)
         })?;
 
@@ -90,7 +94,15 @@ impl Sock {
         let src = SocketAddr::new(saddr.into(), sport);
         let dst = SocketAddr::new(daddr.into(), dport);
 
-        Ok(Sock { call, pid, src, dst })
+        let mut rx = 0;
+        let mut tx = 0;
+
+        if tail.len() == 8 {
+            rx = u32::from_ne_bytes(tail[..4].try_into()?);
+            tx = u32::from_ne_bytes(tail[4..].try_into()?);
+        }
+
+        Ok(Sock { call, pid, src, dst, rx, tx })
     }
 
 }

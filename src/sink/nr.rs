@@ -107,6 +107,8 @@ impl Sender {
                     "container.id":     id,
                     "container.name":   name,
                     "container.image":  image,
+                    "bytes.rx":         record.rx,
+                    "bytes.tx":         record.tx,
                 }))
             }).collect::<Result<Vec<_>>>()?;
 
