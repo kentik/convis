@@ -1,11 +1,14 @@
 use std::fs;
 use std::sync::Arc;
 use std::time::SystemTime;
+use std::process::exit;
 use anyhow::Result;
 use env_logger::Builder;
 use gumdrop::Options;
 use log::{trace, LevelFilter};
 use shiplift::Docker;
+use tokio::select;
+use tokio::signal::unix::{signal, SignalKind};
 use convis::code::Code;
 use convis::data::Record;
 use convis::sink::Sink;
@@ -41,6 +44,15 @@ async fn main() -> Result<()> {
         None       => BYTECODE.to_vec(),
     })?;
 
+    let mut sigint  = signal(SignalKind::interrupt())?;
+    let mut sigterm = signal(SignalKind::terminate())?;
+    tokio::spawn(async move {
+        select! {
+            _ = sigint.recv()  => exit(0),
+            _ = sigterm.recv() => exit(0),
+        }
+    });
+
     let docker   = Docker::new();
     let hostname = Arc::new(hostname::get()?.to_string_lossy().to_string());
     let tracker  = Arc::new(Tracker::new(docker));
@@ -59,7 +71,7 @@ async fn main() -> Result<()> {
                 event:     format!("{:?}", event.call),
                 src:       event.src,
                 dst:       event.dst,
-                process:   process.clone(),
+                process:   process,
                 hostname:  hostname.clone(),
             };
             trace!("{:?}", record);
