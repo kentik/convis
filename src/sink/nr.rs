@@ -13,17 +13,17 @@ use tokio::time::interval;
 use crate::data::Record;
 use super::Args;
 
-pub struct Client {
+pub struct NewRelicClient {
     sender: Arc<Sender>,
 }
 
-pub struct Sender {
+struct Sender {
     client:   HttpClient,
     endpoint: Url,
     records:  Mutex<Vec<Record>>,
 }
 
-impl Client {
+impl NewRelicClient {
     pub fn new(args: Args) -> Result<Self> {
         let account = args.get("account")?;
         let key     = args.get("key")?;
