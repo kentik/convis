@@ -10,6 +10,14 @@ cargo build --release
 sudo target/release/convis -v
 ```
 
+## Sinks
+
+Convis can output metrics to New Relic and Prometheus in addition to stdout. 
+
+* Target New Relic: `./convis --sink newrelic,account=$NR_ACCOUNT_ID,key=$NR_INSIGHTS_INSERT_KEY`
+* Target Grafana Cloud: `./convis --sink 'prometheus,endpoint=https://$PROMETHEUS_HOST.grafana.net/api/prom/push,username=$PROMETHEUS_ID,password=$GRAFANA_API_KEY'`
+  
+
 ## License
 
 Copyright 2021 Kentik, Inc.
