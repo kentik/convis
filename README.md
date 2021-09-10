@@ -17,6 +17,19 @@ Convis can output metrics to New Relic and Prometheus in addition to stdout.
 * Target New Relic: `./convis --sink newrelic,account=$NR_ACCOUNT_ID,key=$NR_INSIGHTS_INSERT_KEY`
 * Target Grafana Cloud: `./convis --sink 'prometheus,endpoint=https://$PROMETHEUS_HOST.grafana.net/api/prom/push,username=$PROMETHEUS_ID,password=$GRAFANA_API_KEY'`
   
+## Docker
+
+One can also run convis from Docker:
+
+```
+docker run --name convis \
+   --privileged \
+   --pid=host \
+   --ulimit memlock=8192000:8192000 \
+   -v /var/run/docker.sock:/var/run/docker.sock \
+   -v /sys/kernel/debug:/sys/kernel/debug \
+   kentik/convis:latest
+```
 
 ## License
 
