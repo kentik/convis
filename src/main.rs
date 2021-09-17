@@ -6,7 +6,6 @@ use anyhow::Result;
 use env_logger::Builder;
 use gumdrop::Options;
 use log::{trace, LevelFilter};
-use shiplift::Docker;
 use tokio::select;
 use tokio::signal::unix::{signal, SignalKind};
 use convis::code::Code;
@@ -53,9 +52,8 @@ async fn main() -> Result<()> {
         }
     });
 
-    let docker   = Docker::new();
     let hostname = Arc::new(hostname::get()?.to_string_lossy().to_string());
-    let tracker  = Arc::new(Tracker::new(docker));
+    let tracker  = Arc::new(Tracker::new().await?);
 
     let (execs, mut socks) = code.exec()?;
     tracker.clone().spawn(execs);
