@@ -3,6 +3,8 @@
 convis demonstrates use of the Linux extended BPF facility to
 attribute process and container information to network traffic.
 
+Come visit the [Discord](https://discord.gg/kentik) if you have any questions, need any assistance, or want to talk about the development of convis.
+
 Usage:
 
 ```
