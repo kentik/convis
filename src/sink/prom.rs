@@ -151,6 +151,11 @@ impl Sender {
                     label("container_image", container.image.to_string());
                 }
 
+                if let Some(pod) = &record.process.pod {
+                    label("k8s_pod", pod.name.to_string());
+                    label("k8s_namespace", pod.namespace.to_string());
+                }
+
                 let mut labels0 = labels.clone();
                 labels0.push(Label {
                     name:  "__name__".to_owned(),

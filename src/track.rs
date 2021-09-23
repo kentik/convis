@@ -16,7 +16,7 @@ use tokio::sync::mpsc::Receiver;
 use tokio::time::interval;
 use tonic::transport::{Channel, Endpoint};
 use tower::service_fn;
-use crate::data::{Container, Process, Status};
+use crate::data::{Container, Pod, Process, Status};
 use crate::event::Exec;
 
 pub struct Tracker {
@@ -75,6 +75,7 @@ impl Tracker {
                 command:   p.command.clone(),
                 container: p.container.clone(),
                 status:    Status::Dead,
+                pod:       None,
             });
         });
     }
@@ -86,15 +87,17 @@ impl Tracker {
         let status  = Status::Alive;
 
         let mut container = None;
+        let mut pod = None;
 
         for cgroup in &cgroups {
             if let Some(c) = self.client.lookup(cgroup).await {
+                pod = self.client.pod(&c).await;
                 container = Some(c);
                 break;
             }
         }
 
-        Some(Arc::new(Process { pid, command, container, status }))
+        Some(Arc::new(Process { pid, command, container, pod, status }))
     }
 
     async fn sweep(self: Arc<Self>) -> Result<()> {
@@ -141,9 +144,10 @@ impl Client {
         let c = self.docker.as_ref()?.containers();
         let c = c.get(id).inspect().await.ok()?;
         Some(Container {
-            id:    c.id,
-            name:  c.name,
-            image: c.config.image,
+            id:     c.id,
+            name:   c.name,
+            image:  c.config.image,
+            labels: c.config.labels.unwrap_or_default(),
         })
     }
 
@@ -156,9 +160,17 @@ impl Client {
         }).await.ok()?.into_inner().status?;
 
         Some(Container {
-            id:    s.id.clone(),
-            name:  s.metadata?.name.clone(),
-            image: s.image?.image.clone(),
+            id:     s.id.clone(),
+            name:   s.metadata?.name.clone(),
+            image:  s.image?.image.clone(),
+            labels: s.labels.clone(),
+        })
+    }
+
+    async fn pod(&self, c: &Container) -> Option<Pod> {
+        Some(Pod{
+            name: c.labels.get("io.kubernetes.pod.name")?.clone(),
+            namespace: c.labels.get("io.kubernetes.pod.namespace")?.clone(),
         })
     }
 }

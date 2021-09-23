@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::SystemTime;
@@ -9,14 +10,22 @@ pub struct Process {
     pub pid:       pid_t,
     pub command:   Vec<String>,
     pub container: Option<Container>,
+    pub pod:       Option<Pod>,
     pub status:    Status,
 }
 
 #[derive(Clone, Debug, Serialize)]
 pub struct Container {
-    pub id:    String,
-    pub name:  String,
-    pub image: String,
+    pub id:     String,
+    pub name:   String,
+    pub image:  String,
+    pub labels: HashMap<String, String>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct Pod {
+    pub name: String,
+    pub namespace: String,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
