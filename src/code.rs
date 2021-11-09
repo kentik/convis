@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 use std::future::Future;
 use bytes::BytesMut;
 use anyhow::Result;
-use aya::{Bpf, Btf};
+use aya::Bpf;
 use aya::maps::perf::AsyncPerfEventArray;
 use aya::programs::Program;
 use aya::util::online_cpus;
@@ -16,8 +16,7 @@ pub struct Code {
 
 impl Code {
     pub fn load(bytecode: &[u8]) -> Result<Self> {
-        let btf = Btf::from_sys_fs().ok();
-        let bpf = Bpf::load(&bytecode, btf.as_ref())?;
+        let bpf = Bpf::load(&bytecode)?;
         Ok(Self { bpf })
     }
 

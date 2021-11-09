@@ -7,26 +7,26 @@ edition = "2018"
 base64       = "0.13.0"
 bytes        = "1.1.0"
 env_logger   = "0.9.0"
-flate2       = "1.0.21"
+flate2       = "1.0.22"
 gumdrop      = "0.8.0"
 hostname     = "0.3.1"
 k8s-cri      = "0.4.0"
-libc         = "0.2.101"
+libc         = "0.2.107"
 log          = "0.4.14"
 parking_lot  = "0.11.2"
-procfs       = "0.10.1"
+procfs       = "0.11.0"
 prost        = "0.8.0"
-serde_json   = "1.0.67"
+serde_json   = "1.0.69"
 snap         = "1.0.5"
 tonic        = "0.5.2"
-tower        = "0.4.8"
+tower        = "0.4.10"
 
 [dependencies.anyhow]
-version  = "1.0.43"
+version  = "1.0.45"
 features = ["backtrace"]
 
 [dependencies.aya]
-version  = "0.10.3"
+version  = "0.10.5"
 features = ["async_tokio"]
 
 [dependencies.shiplift]
@@ -39,7 +39,7 @@ version  = "1.7.2"
 features = ["derive"]
 
 [dependencies.reqwest]
-version  = "0.11.4"
+version  = "0.11.6"
 features = ["gzip", "json", "rustls-tls"]
 default-features = false
 
@@ -48,5 +48,5 @@ version  = "1.0.130"
 features = ["derive", "rc"]
 
 [dependencies.tokio]
-version  = "1.10.1"
+version  = "1.13.0"
 features = ["full"]
