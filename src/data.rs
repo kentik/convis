@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime};
 use libc::pid_t;
 use serde::Serialize;
 
@@ -44,4 +44,6 @@ pub struct Record {
     pub hostname:  Arc<String>,
     pub rx:        u32,
     pub tx:        u32,
+    pub srtt:      Duration,
+    pub retx:      u32,
 }

@@ -1,6 +1,6 @@
 use std::fs;
 use std::sync::Arc;
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime};
 use std::process::exit;
 use anyhow::Result;
 use env_logger::Builder;
@@ -73,6 +73,8 @@ async fn main() -> Result<()> {
                 hostname:  hostname.clone(),
                 rx:        event.rx,
                 tx:        event.tx,
+                srtt:      Duration::from_micros(event.srtt.into()),
+                retx:      event.retx,
             };
             trace!("{:?}", record);
             sink.send(record)?;

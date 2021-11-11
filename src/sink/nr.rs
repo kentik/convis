@@ -92,6 +92,7 @@ impl Sender {
 
                 let timestamp = record.timestamp.duration_since(UNIX_EPOCH)?;
                 let timestamp = u64::try_from(timestamp.as_millis())?;
+                let srtt      = u64::try_from(record.srtt.as_micros())?;
 
                 Ok(json!({
                     "eventType":        "ContainerVisibility",
@@ -109,6 +110,8 @@ impl Sender {
                     "container.image":  image,
                     "bytes.rx":         record.rx,
                     "bytes.tx":         record.tx,
+                    "tcp.srtt":         srtt,
+                    "tcp.retransmits":  record.retx,
                 }))
             }).collect::<Result<Vec<_>>>()?;
 

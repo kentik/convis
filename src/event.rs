@@ -25,6 +25,8 @@ pub struct Sock {
     pub dst:  SocketAddr,
     pub rx:   u32,
     pub tx:   u32,
+    pub srtt: u32,
+    pub retx: u32,
 }
 
 #[derive(Debug)]
@@ -94,15 +96,19 @@ impl Sock {
         let src = SocketAddr::new(saddr.into(), sport);
         let dst = SocketAddr::new(daddr.into(), dport);
 
-        let mut rx = 0;
-        let mut tx = 0;
+        let mut rx   = 0;
+        let mut tx   = 0;
+        let mut srtt = 0;
+        let mut retx = 0;
 
-        if tail.len() == 8 {
-            rx = u32::from_ne_bytes(tail[..4].try_into()?);
-            tx = u32::from_ne_bytes(tail[4..].try_into()?);
+        if tail.len() == 16 {
+            rx   = u32::from_ne_bytes(tail[0..4].try_into()?);
+            tx   = u32::from_ne_bytes(tail[4..8].try_into()?);
+            srtt = u32::from_ne_bytes(tail[8..12].try_into()?);
+            retx = u32::from_ne_bytes(tail[12..16].try_into()?);
         }
 
-        Ok(Sock { call, pid, src, dst, rx, tx })
+        Ok(Sock { call, pid, src, dst, rx, tx, srtt, retx })
     }
 
 }
