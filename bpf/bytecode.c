@@ -180,10 +180,10 @@ int bpf_call_tcp_close(struct pt_regs *ctx) {
 
     u32 rx = 0, tx = 0, srtt = 0, retx = 0;
     struct tcp_sock *tcp = (struct tcp_sock *) sk;
-    bpf_probe_read(&rx, sizeof(rx), &tcp->bytes_received);
-    bpf_probe_read(&tx, sizeof(tx), &tcp->bytes_acked);
-    bpf_probe_read(&srtt, sizeof(srtt), &tcp->srtt_us);
-    bpf_probe_read(&retx, sizeof(retx), &tcp->retrans_out);
+    bpf_probe_read(&rx, sizeof(rx), __builtin_preserve_access_index(&tcp->bytes_received));
+    bpf_probe_read(&tx, sizeof(tx), __builtin_preserve_access_index(&tcp->bytes_acked));
+    bpf_probe_read(&srtt, sizeof(srtt), __builtin_preserve_access_index(&tcp->srtt_us));
+    bpf_probe_read(&retx, sizeof(retx), __builtin_preserve_access_index(&tcp->retrans_out));
 
     struct close event = {
         .header = {

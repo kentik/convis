@@ -84,4 +84,8 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-const BYTECODE: &[u8] = include_bytes!("../bpf/bytecode.o");
+#[cfg(target_arch = "aarch64")]
+const BYTECODE: &[u8] = include_bytes!("../bpf/bytecode.arm64.o");
+
+#[cfg(target_arch = "x86_64")]
+const BYTECODE: &[u8] = include_bytes!("../bpf/bytecode.x86.o");
