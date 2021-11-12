@@ -1,16 +1,17 @@
-FROM ubuntu:latest
+FROM ubuntu:21.04 as rust
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y curl build-essential cmake libprotobuf-c-dev protobuf-c-compiler
+RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
 
-ARG TARGETARCH
-ARG TARGETPLATFORM
-ARG TARGETVARIANT
-ARG BINARY=binary/${TARGETARCH}${TARGETVARIANT}/convis
+FROM rust as build
+COPY . /app
+WORKDIR /app
+RUN bash -c "source /root/.cargo/env && cargo build --release"
 
-RUN apt-get update && apt-get install -y strace
+FROM scratch as binary
+COPY --from=build /app/target/release/convis /convis
 
-RUN mkdir -p  /opt/kentik
-ADD $BINARY   /opt/kentik/
-RUN chmod a+x /opt/kentik/convis
-
-WORKDIR /opt/kentik/
-
-ENTRYPOINT ["/opt/kentik/convis"]
+FROM ubuntu:21.04
+RUN apt-get update && apt-get install -y strace curl
+RUN mkdir -p /opt/kentik
+COPY --from=build /app/target/release/convis /opt/kentik/convis
+CMD ["/opt/kentik/convis"]
